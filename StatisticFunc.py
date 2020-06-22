@@ -1,3 +1,5 @@
+
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -67,3 +69,28 @@ def ReturnDist(ReturnsDF, Ncol=2):
     return 
 
 
+def WeightPlot(tradeDF, weightDF, ttl):
+    
+    # 1. Find the data of trading day
+    tradingDay = tradeDF.index[tradeDF['仓位调整']==1.0]
+    tmpDF = weightDF.loc[tradingDay, :]
+    tmpDF = tmpDF.fillna(0)
+    
+    # 2. Prepare the data for plotting
+    labs = tmpDF.columns.to_list()
+
+    x = tmpDF.index.to_list()
+    y = []
+    for col in tmpDF.columns:
+        y.append( tmpDF[col].values.tolist() )
+
+    y = np.vstack(y)
+    
+    # 2. Plot the figure and save
+    fig = plt.figure(figsize=(16, 8), dpi=150)
+    plt.stackplot(x, y, labels=labs)
+    plt.legend(loc='best')
+    plt.title(str(ttl) + '资产权重走势')
+    plt.savefig( str(ttl)+'资产权重走势.jpg' )
+    
+    return
