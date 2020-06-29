@@ -6,7 +6,7 @@ from scipy import optimize
 
 # 20天滑动平均计算协方差矩阵
 def CovrainceMatrix(dataFrame):
-    return np.cov(dataFrame.values, rowvar=False, ddof=1)  # covraiance matrix of assets at time t
+    return np.cov(dataFrame.values.astype(np.float32), rowvar=False, ddof=1)  # covraiance matrix of assets at time t
 
 
 # 优化问题中的目标函数

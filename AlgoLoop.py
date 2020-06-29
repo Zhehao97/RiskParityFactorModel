@@ -25,7 +25,9 @@ def recordTrades(TradeDF, idx, col, assetsValue, totalValue, maxDrawdown, pos=0)
 
 # 主回测程序
 def AlgoTrade(Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.2, threshold=0.9, 
-                                factorDict={'momentumX':False, 'momentumT':False, 'turnover':False}):
+                                factorDict={'momentumX':False, 'momentumT':False, 
+                                            'reverseX':False, 'reverseT':False,
+                                            'turnover':False}):
 
     # 1.初始化数据变量
     alpha = 2 / dt                # 指数加权系数  
@@ -85,35 +87,57 @@ def AlgoTrade(Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.2, thre
 
             if factorDict['momentumX']:
             
-                # 横截面动量因子筛选出的重仓资产
-                topCol = Factors.momentumX(tmpCumReturns, col, t, dt)
+                # 动量因子（横向比较）
+                momentumX_col = Factors.momentumX(tmpCumReturns, col, t, dt)
 
                 # 调整权重
-                if (len(topCol) > 0):
-                    Weights.loc[idx, topCol] = Weights.loc[idx, topCol] * (1.0 + up)            # 上调重仓资产权重 
-                    Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum() # 标准化处理, 无杠杆  
+                if (len(momentumX_col) > 0):
+                    Weights.loc[idx, momentumX_col] = Weights.loc[idx, momentumX_col] * (1.0 + up)  # 上调重仓资产权重 
+                    Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆  
       
 
             if factorDict['momentumT']:
 
-                # 时序动量因子筛选出的重仓资产
-                topCol = Factors.momentumT(tmpCumReturns, col, t, dt)
+                # 动量因子（时序比较）
+                momentumT_col = Factors.momentumT(tmpCumReturns, col, t, dt)
 
                 # 调整权重
-                if (len(topCol) > 0):
-                    Weights.loc[idx, topCol] = Weights.loc[idx, topCol] * (1.0 + up)            # 上调重仓资产权重 
-                    Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum() # 标准化处理, 无杠杆  
+                if (len(momentumT_col) > 0):
+                    Weights.loc[idx, momentumT_col] = Weights.loc[idx, momentumT_col] * (1.0 + up)  # 上调重仓资产权重 
+                    Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆  
+
+
+            if factorDict['reverseX']:
+                
+                # 反转因子（横向比较）
+                reverseX_col = Factors.reverseX(tmpCumReturns, col, t, dt)
+
+                # 调整权重
+                if (len(reverseX_col) > 0):
+                    Weights.loc[idx, reverseX_col] = Weights.loc[idx, reverseX_col] * (1.0 + up)    # 上调重仓资产权重 
+                    Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆 
+
+
+            if factorDict['reverseT']:
+                                
+                # 反转因子（时序比较）
+                reverseT_col = Factors.reverseT(tmpCumReturns, col, t, dt)
+
+                # 调整权重
+                if (len(reverseT_col) > 0):
+                    Weights.loc[idx, reverseT_col] = Weights.loc[idx, reverseT_col] * (1.0 + up)    # 上调重仓资产权重 
+                    Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆 
 
 
             if factorDict['turnover']:
 
-                # 时序换手率因子决定是否重仓股指
-                topCol = Factors.turnover(Turnovers, col, t, dt)
+                # 情绪因子（股指换手率）
+                turnover_col = Factors.turnover(Turnovers, col, t, dt)
 
-                                # 调整权重
-                if (len(topCol) > 0):
-                    Weights.loc[idx, topCol] = Weights.loc[idx, topCol] * (1.0 + up)            # 上调重仓资产权重 
-                    Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum() # 标准化处理, 无杠杆  
+                # 调整权重
+                if (len(turnover_col) > 0):
+                    Weights.loc[idx, turnover_col] = Weights.loc[idx, turnover_col] * (1.0 + up)    # 上调重仓资产权重 
+                    Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆  
 
                 
             # 计算各资产配比
