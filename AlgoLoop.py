@@ -1,5 +1,4 @@
 
-
 import numpy as np
 import pandas as pd
 import RiskParity 
@@ -24,10 +23,12 @@ def recordTrades(TradeDF, idx, col, assetsValue, totalValue, maxDrawdown, pos=0)
 
 
 # 主回测程序
-def AlgoTrade(Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.2, threshold=0.9, 
-                                factorDict={'momentumX':False, 'momentumT':False, 
-                                            'reverseX':False, 'reverseT':False,
-                                            'turnover':False}):
+def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.50, 
+                    thresholds={'Equity':0.25, 'FixedIncome':0.45, 'Commodity':0.10}, 
+                    factorDict={'momentumX':False, 'momentumT':False, 
+                                'reverseX':False, 'reverseT':False, 
+                                'turnover':False, 
+                                'copperGold':False, 'copperGas':False}):
 
     # 1.初始化数据变量
     alpha = 2 / dt                # 指数加权系数  
@@ -36,7 +37,9 @@ def AlgoTrade(Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.2, thre
     maxDd = 0.0                   # 最大回撤
     flag = 0.0                    # flag = 1 有持仓，flag = 0 无持仓 
     
-    tmpReturns = Returns.copy()   # 创建一个副本
+    # 1.1 创建一个副本
+    tmpPrices     = Prices.copy()
+    tmpReturns    = Returns.copy()   
     tmpCumReturns = cumReturns.copy()
     
     
@@ -67,7 +70,7 @@ def AlgoTrade(Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.2, thre
 
         # 优化后的各资产权重
         w_prev = Weights.loc[idx_prev, col].values                       # t-1时刻各资产权重
-        w = RiskParity.ComputeWeight(w0, V, threshold)                   # 等风险权重
+        w = RiskParity.ComputeWeight(w0, V, col, thresholds)             # 等风险权重
 
         # 是否将权重进行指数平均
         if mode == 'ema':
@@ -83,12 +86,12 @@ def AlgoTrade(Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.2, thre
         # 3.3 调整仓位（每dt个交易日）
         if (t % dt == 0) and (flag == 0):                                # 调仓日  
 
-            topCol = []                                                  # 重仓股列表
-
             if factorDict['momentumX']:
             
                 # 动量因子（横向比较）
                 momentumX_col = Factors.momentumX(tmpCumReturns, col, t, dt)
+                
+                print(t, '横截面动量', momentumX_col)
 
                 # 调整权重
                 if (len(momentumX_col) > 0):
@@ -100,6 +103,8 @@ def AlgoTrade(Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.2, thre
 
                 # 动量因子（时序比较）
                 momentumT_col = Factors.momentumT(tmpCumReturns, col, t, dt)
+                
+                print(t, '时序动量', momentumT_col)
 
                 # 调整权重
                 if (len(momentumT_col) > 0):
@@ -111,6 +116,8 @@ def AlgoTrade(Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.2, thre
                 
                 # 反转因子（横向比较）
                 reverseX_col = Factors.reverseX(tmpCumReturns, col, t, dt)
+                
+                print(t, '横截面反转', reverseX_col)
 
                 # 调整权重
                 if (len(reverseX_col) > 0):
@@ -122,6 +129,8 @@ def AlgoTrade(Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.2, thre
                                 
                 # 反转因子（时序比较）
                 reverseT_col = Factors.reverseT(tmpCumReturns, col, t, dt)
+                
+                print(t, '时序反转', reverseT_col)
 
                 # 调整权重
                 if (len(reverseT_col) > 0):
@@ -133,19 +142,52 @@ def AlgoTrade(Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.2, thre
 
                 # 情绪因子（股指换手率）
                 turnover_col = Factors.turnover(Turnovers, col, t, dt)
+                
+                print(t, '换手率', turnover_col)
 
                 # 调整权重
                 if (len(turnover_col) > 0):
                     Weights.loc[idx, turnover_col] = Weights.loc[idx, turnover_col] * (1.0 + up)    # 上调重仓资产权重 
                     Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆  
 
+
+            if factorDict['copperGold']:
+
+                # 铜金价格比因子
+                copper_gold = Factors.copperGold(tmpPrices, col, t, dt)
                 
+                print(t, '铜金', copper_gold)
+
+                # 调整权重
+                if (len(copper_gold) > 0):
+                    Weights.loc[idx, copper_gold] = Weights.loc[idx, copper_gold] * (1.0 + up)      # 上调重仓资产权重 
+                    Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆 
+
+
+            if factorDict['copperGas']:
+
+                # 铜金价格比因子
+                copper_gas = Factors.copperGas(tmpPrices, col, t, dt)
+                
+                print(t, '铜油', copper_gas)
+
+                # 调整权重
+                if (len(copper_gas) > 0):
+                    Weights.loc[idx, copper_gas] = Weights.loc[idx, copper_gas] * (1.0 + up)        # 上调重仓资产权重 
+                    Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆  
+
+
+            ###############################                
             # 计算各资产配比
+            ###############################
             assetsVal = 0.999 * totVal * Weights.loc[idx, col]               # 各资产净值，千1手续费  
             flag = 1
 
-        else:                                                                
+
+        else:                
+            ##############################                                                
             # 逐日盯市
+            ##############################
             assetsVal = Trades.loc[idx_prev, col] * (1.0 + Returns.loc[idx, col])
             flag = 0
 
@@ -157,8 +199,7 @@ def AlgoTrade(Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.2, thre
             maxVal = totVal                                                  # 更新历史最大净值
 
         maxDd = (totVal - maxVal) / maxVal                                   # 计算最大回撤
-        
-        
+    
         # 3.5 记录交易数据
         Trades  = recordTrades(Trades, idx, col, assetsVal, totVal, maxDd, pos=flag)   
         

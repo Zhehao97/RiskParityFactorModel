@@ -1,12 +1,12 @@
 
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
-# 统计每年末各资产净值
-def annualReturns(NetValueDF):
+###############################################
+# 基本统计指标
+###############################################
+def AnnualReturns(NetValueDF):
     # 0. 创建备用表
     tmpDF = NetValueDF.reset_index()
 
@@ -21,12 +21,13 @@ def annualReturns(NetValueDF):
         yearNetValue.loc[y, :] = NetValueDF.loc[end, :].values
     
     # 3. 计算年间收益率
-    yearReturns = yearNetValue / yearNetValue.shift(1, axis=0) - 1.0
+    handleNA = NetValueDF.dropna().iloc[0, :]
+    yearReturns = yearNetValue / yearNetValue.shift(1, axis=0).fillna(handleNA) - 1.0
     
     return yearReturns
 
 
-def monthlyReturns(NetValueDF):
+def MonthlyReturns(NetValueDF):
     # 0. 创建备用表
     tmpDF = NetValueDF.reset_index()
 
@@ -46,9 +47,22 @@ def monthlyReturns(NetValueDF):
     return monthlyReturns
 
 
-def ReturnDist(ReturnsDF, Ncol=2):
+def DailyReturns(NetValueDF):
+    return NetValueDF / NetValueDF.shift(1, axis=0) - 1.0
+
+def AnnualVolatility(NetValueDF):
+    return DailyReturns(NetValueDF).groupby(NetValueDF.index.year).std() * np.sqrt(250)
+
+def AnnualMaxDrawdown(MDD):
+    return MDD.groupby(MDD.index.year).min()
+
+
+########################################
+# 画柱形图
+########################################
+def BarPlot(DF, ttl, Ncol=2):
     
-    N = len(ReturnsDF.columns)
+    N = len(DF.columns)
     Nrow = int(np.ceil(N / Ncol))
     flag = 0
     
@@ -57,18 +71,22 @@ def ReturnDist(ReturnsDF, Ncol=2):
         for j in range(Ncol):
             if (flag >= N):
                 break
-            axs[i][j].hist(ReturnsDF.iloc[:, flag], bins=15, label='年间收益率')
-            axs[i][j].set_xlabel('收益率')
-            axs[i][j].set_ylabel('频数')
-            axs[i][j].set_xlim(-0.20, 0.20)
+            axs[i][j].bar(DF.index, height=DF.iloc[:, flag], label=DF.columns[flag])
+            axs[i][j].set_xlabel('时间')
+            axs[i][j].set_ylabel('贡献度')
+            axs[i][j].set_ylim(-1.0, 1.0)
             axs[i][j].legend(loc='best')
-            axs[i][j].set_title(ReturnsDF.columns[flag])
+            axs[i][j].set_title( str(DF.columns[flag])+'对组合损益的贡献度' )
             flag += 1
-    plt.show()
+    plt.savefig('贡献度_' + str(ttl) + '.png')
     
     return 
+ 
 
 
+########################################
+# 权重走势
+########################################
 def WeightPlot(tradeDF, weightDF, ttl):
     
     # 1. Find the data of trading day
@@ -91,6 +109,55 @@ def WeightPlot(tradeDF, weightDF, ttl):
     plt.stackplot(x, y, labels=labs)
     plt.legend(loc='best')
     plt.title(str(ttl) + '资产权重走势')
-    plt.savefig( str(ttl)+'资产权重走势.jpg' )
+    plt.savefig('资产权重走势_' + str(ttl) + '.png')
     
     return
+
+
+############################################################
+# 贡献度计算
+############################################################
+
+def PeriodContribution(tradeDF, weightDF, assetDF):
+
+    # 计算调仓日
+    trading_day = tradeDF.index[tradeDF['仓位调整'] == 1.0]
+
+    # 一个交易周期内各资产所占权重
+    W = weightDF.loc[trading_day, :].shift(1, axis=0)
+
+    # 一个交易周期内投资组合损益
+    PortfolioPnL = tradeDF.loc[trading_day, '投资组合净值'] / tradeDF.loc[trading_day, '投资组合净值'].shift(1, axis=0) - 1.0
+
+    # 一个交易周期内各资产损益
+    AssetPnL = assetDF.loc[trading_day, :] / assetDF.loc[trading_day, :].shift(1, axis=0) - 1.0
+
+    # 一个交易周期内各资产对组合损益的贡献度
+    weightedPnL = AssetPnL * W 
+
+    # 计算各资产对组合损益的贡献度
+    for col in weightedPnL.columns:
+        weightedPnL[col] /= PortfolioPnL
+
+    return weightedPnL
+
+
+def AnnualContribution(tradeDF, weightDF, assetDF):
+
+    # 一个周期内各资产对组合的贡献
+    C = PeriodContribution(tradeDF, weightDF, assetDF)
+
+    # 以组合的净值差作为权重系数
+    W = tradeDF.loc[C.index, '投资组合净值'] - tradeDF.loc[C.index, '投资组合净值'].shift(1, axis=0)
+
+    # 先加权 x = (b - a) * x1 + (c - b) * x2
+    for col in C.columns:
+        C[col] = C[col] * W
+    C = C.groupby(C.index.year).sum()
+
+    # 后平均 x = x / (c-a)
+    W = W.groupby(W.index.year).sum()
+    for col in C.columns:
+        C[col] = C[col] / W
+
+    return C
