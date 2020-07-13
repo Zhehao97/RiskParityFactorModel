@@ -91,7 +91,7 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
                 # 动量因子（横向比较）
                 momentumX_col = Factors.momentumX(tmpCumReturns, col, t, dt)
                 
-                print(t, '横截面动量', momentumX_col)
+#                 print(t, '横截面动量', momentumX_col)
 
                 # 调整权重
                 if (len(momentumX_col) > 0):
@@ -104,7 +104,7 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
                 # 动量因子（时序比较）
                 momentumT_col = Factors.momentumT(tmpCumReturns, col, t, dt)
                 
-                print(t, '时序动量', momentumT_col)
+#                 print(t, '时序动量', momentumT_col)
 
                 # 调整权重
                 if (len(momentumT_col) > 0):
@@ -117,7 +117,7 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
                 # 反转因子（横向比较）
                 reverseX_col = Factors.reverseX(tmpCumReturns, col, t, dt)
                 
-                print(t, '横截面反转', reverseX_col)
+#                 print(t, '横截面反转', reverseX_col)
 
                 # 调整权重
                 if (len(reverseX_col) > 0):
@@ -130,7 +130,7 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
                 # 反转因子（时序比较）
                 reverseT_col = Factors.reverseT(tmpCumReturns, col, t, dt)
                 
-                print(t, '时序反转', reverseT_col)
+#                 print(t, '时序反转', reverseT_col)
 
                 # 调整权重
                 if (len(reverseT_col) > 0):
@@ -143,7 +143,7 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
                 # 情绪因子（股指换手率）
                 turnover_col = Factors.turnover(Turnovers, col, t, dt)
                 
-                print(t, '换手率', turnover_col)
+#                 print(t, '换手率', turnover_col)
 
                 # 调整权重
                 if (len(turnover_col) > 0):
@@ -156,7 +156,7 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
                 # 铜金价格比因子
                 copper_gold = Factors.copperGold(tmpPrices, col, t, dt)
                 
-                print(t, '铜金', copper_gold)
+#                 print(t, '铜金', copper_gold)
 
                 # 调整权重
                 if (len(copper_gold) > 0):
@@ -169,7 +169,7 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
                 # 铜金价格比因子
                 copper_gas = Factors.copperGas(tmpPrices, col, t, dt)
                 
-                print(t, '铜油', copper_gas)
+#                 print(t, '铜油', copper_gas)
 
                 # 调整权重
                 if (len(copper_gas) > 0):
