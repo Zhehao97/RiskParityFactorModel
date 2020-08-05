@@ -33,7 +33,7 @@ def ComputeWeight(W0, covarianceMat, cols, thrds={'Equity':0.25, 'FixedIncome':0
     for i in range(len(cols)):
         if (cols[i] == '沪深300') or (cols[i] == '中证500') or (cols[i] == '标普500'):
             bnds.append((0, thrds['Equity']))   
-        elif (cols[i] == '中国10年国债') or (cols[i] == '信用债3-5AAA') or (cols[i] == '美国10年国债'):
+        elif (cols[i] == '10年国债') or (cols[i] == '信用债3-5AAA') or (cols[i] == '10年美债'):
             bnds.append((0, thrds['FixedIncome']))
         else:
             bnds.append((0, thrds['Commodity']))

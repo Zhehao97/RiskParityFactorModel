@@ -69,7 +69,7 @@ def copperGold(Prices, col, t, dt):
     ratioCG = ratioCG.ewm(span=dt, axis=0).mean()
     ratio_prev = ratioCG[t-dt]
     ratio_now  = ratioCG[t]
-    topCol = set(['上证10年国债', '信用债3-5AAA']) & set(col.to_list())
+    topCol = set(['10年国债', '信用债3-5AAA']) & set(col.to_list())
         
     if (ratio_now < ratio_prev):
         return list(topCol)
@@ -94,8 +94,24 @@ def copperGas(Prices, col, t, dt):
         return []     
 
 
-
-
+def fxRate(FXs, col, t, dt):
+    
+    fxs = FXs.ewm(span=dt, axis=0).mean()
+    fx_prev = fxs['美元汇率'][t-dt]
+    fx_now = fxs['美元汇率'][t]
+    
+    # 重仓中国国债
+    if (fx_now > fx_prev):  
+        topCol = set(['10年国债']) & set(col.to_list())
+    
+    # 重仓美国国债
+    elif (fx_now < fx_prev): 
+        topCol = set(['10年美债']) & set(col.to_list())
+        
+    else:
+        topCol = []
+        
+    return topCol
 
 
 

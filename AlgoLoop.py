@@ -12,28 +12,30 @@ def recordWeights(WeightDF, idx, colNames, w):
 
 
 # 记录交易数据
-def recordTrades(TradeDF, idx, col, assetsValue, totalValue, maxDrawdown, pos=0):
+def recordTrades(TradeDF, idx, col, assetsValue, totalValue, maxDrawdown, maxTime, pos=0):
     for i in range(len(col)):
         TradeDF.loc[idx, col[i]] = assetsValue[i]
     TradeDF.loc[idx, '投资组合净值'] = totalValue
     TradeDF.loc[idx, '最大回撤'] = maxDrawdown
+    TradeDF.loc[idx, '最长不创新高时间'] = maxTime
     TradeDF.loc[idx, '仓位调整'] = pos
     return TradeDF
 
 
 
 # 主回测程序
-def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0.50, 
+def AlgoTrade(Prices, Returns, cumReturns, Turnovers, FXRates, mode='plain', dt=120, up=0.50, 
                     thresholds={'Equity':0.25, 'FixedIncome':0.45, 'Commodity':0.10}, 
                     factorDict={'momentumX':False, 'momentumT':False, 
                                 'reverseX':False, 'reverseT':False, 
-                                'turnover':False, 
+                                'turnover':False, 'fxRate':False,
                                 'copperGold':False, 'copperGas':False}):
 
     # 1.初始化数据变量
     alpha = 2 / dt                # 指数加权系数  
     totVal = 10000                # 初始资产 
     maxVal = 10000                # 历史最大净值
+    maxDay = dt                   # 创新高时间
     maxDd = 0.0                   # 最大回撤
     flag = 0.0                    # flag = 1 有持仓，flag = 0 无持仓 
     
@@ -137,6 +139,7 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
                     Weights.loc[idx, reverseT_col] = Weights.loc[idx, reverseT_col] * (1.0 + up)    # 上调重仓资产权重 
                     Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆 
 
+                    
 
             if factorDict['turnover']:
 
@@ -149,6 +152,26 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
                 if (len(turnover_col) > 0):
                     Weights.loc[idx, turnover_col] = Weights.loc[idx, turnover_col] * (1.0 + up)    # 上调重仓资产权重 
                     Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆  
+            
+            
+            
+            if factorDict['fxRate']:
+                
+                # 美元兑人民币汇率因子
+                fx_col = Factors.fxRate(FXRates, col, t, dt)
+                
+#                 print(t, '汇率因子', fx_col)
+
+                # 调整权重
+                if (len(fx_col) > 0):
+                    
+                    tot_col = ['10年国债', '10年美债']                                    # 针对国债和美债进行标准化处理
+                    tot_weight = Weights.loc[idx, tot_col].sum()                        # 计算调整前国债和美债总权重
+                    Weights.loc[idx, fx_col] = Weights.loc[idx, fx_col] * (1.0 + up)    # 上调重仓资产权重 
+                    
+                    # 修正国债和美债权重
+                    Weights.loc[idx, tot_col] = tot_weight * Weights.loc[idx, tot_col] / Weights.loc[idx, tot_col].sum()     
+                    
 
 
             if factorDict['copperGold']:
@@ -164,6 +187,7 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
                     Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆 
 
 
+                    
             if factorDict['copperGas']:
 
                 # 铜金价格比因子
@@ -175,7 +199,8 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
                 if (len(copper_gas) > 0):
                     Weights.loc[idx, copper_gas] = Weights.loc[idx, copper_gas] * (1.0 + up)        # 上调重仓资产权重 
                     Weights.loc[idx, col] = Weights.loc[idx, col] / Weights.loc[idx, col].sum()     # 标准化处理, 无杠杆  
-
+                    
+                    
 
             ###############################                
             # 计算各资产配比
@@ -192,16 +217,21 @@ def AlgoTrade(Prices, Returns, cumReturns, Turnovers, mode='plain', dt=120, up=0
             flag = 0
 
             
-        # 3.4 更新净值并计算最大回撤
-        totVal = np.sum(assetsVal)                                           # 更新投资组合净值
+        # 3.4 更新净值，并计算最大回撤和最长不创新高时间
+        totVal = np.sum(assetsVal)                 # 更新投资组合净值
 
         if maxVal < totVal:
-            maxVal = totVal                                                  # 更新历史最大净值
+            maxVal = totVal                        # 更新历史最大净值
+            maxDay = t                             # 更新最大净值时间
 
-        maxDd = (totVal - maxVal) / maxVal                                   # 计算最大回撤
+        # 计算最大回撤
+        maxDd = (totVal - maxVal) / maxVal 
+        
+        # 计算最长不创新高时间
+        maxTt = t - maxDay
     
         # 3.5 记录交易数据
-        Trades  = recordTrades(Trades, idx, col, assetsVal, totVal, maxDd, pos=flag)   
+        Trades  = recordTrades(Trades, idx, col, assetsVal, totVal, maxDd, maxTt, pos=flag)   
         
 #     Weights.to_csv(str(dt) + mode + '权重.csv', encoding='utf_8_sig')
 #     Trades.to_csv(str(dt) + mode + '交易.csv', encoding='utf_8_sig')
