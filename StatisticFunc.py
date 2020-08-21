@@ -136,7 +136,7 @@ def WeightPlot(tradeDF, weightDF, ttl):
     y = np.vstack(y)
     
     # 2. Plot the figure and save
-    fig = plt.figure(figsize=(16, 8), dpi=150)
+    fig = plt.figure(figsize=(16, 6), dpi=150)
     plt.stackplot(x, y, labels=labs)
     plt.legend(loc='best')
     plt.title(str(ttl) + '资产权重走势')

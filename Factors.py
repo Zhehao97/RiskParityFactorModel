@@ -14,20 +14,17 @@ def momentumX(cumReturns, col, t, dt):
     return topCol.to_list()
 
 
+# 时序动量因子
 def momentumT(cumReturns, col, t, dt):
 
-    if (t - 2 * dt >= 0):
+    threshold = 0.05 * dt / 250                                           # 年化收益 5%
+    momentT   = cumReturns.iloc[t-1, :] / cumReturns.iloc[t-dt, :] - 1.0  # 本周期收益率
+    topCol = momentT.index[momentT > threshold] & col                     # 绝对收益率大于阈值的资产
 
-        momentT_prev = cumReturns.iloc[t-dt-1, :] / cumReturns.iloc[t-2*dt, :]  # 上一周期收益率
-        momentT      = cumReturns.iloc[t-1, :] / cumReturns.iloc[t-dt, :]       # 本周期收益率
-        topCol = momentT.index[momentT > momentT_prev] & col                    # 收益率环比增长>0的资产
+    return topCol.to_list()
+       
 
-        return topCol.to_list()
-
-    else:
-        return []          
-
-
+# 横截面反转因子
 def reverseX(cumReturns, col, t, dt):
 
     m = 2                                                                  # 取排名前m的资产重仓
@@ -38,20 +35,17 @@ def reverseX(cumReturns, col, t, dt):
     return bottomCol.to_list()
 
 
+# 时序反转因子
 def reverseT(cumReturns, col, t, dt):
 
-    if (t - 2 * dt >= 0):
+    threshold = -0.05 * dt / 250                                           # 年化收益 -5%
+    reverseT  = cumReturns.iloc[t-1, :] / cumReturns.iloc[t-dt, :] - 1.0   # 本周期收益率
+    bottomCol = reverseT.index[reverseT < threshold] & col                 # 收益率环比增长>0的资产
 
-        reverseT_prev = cumReturns.iloc[t-dt-1, :] / cumReturns.iloc[t-2*dt, :]  # 上一周期收益率
-        reverseT      = cumReturns.iloc[t-1, :] / cumReturns.iloc[t-dt, :]       # 本周期收益率
-        bottomCol = reverseT.index[reverseT < reverseT_prev] & col               # 收益率环比增长>0的资产
+    return bottomCol.to_list()
 
-        return bottomCol.to_list()
-
-    else:
-        return []     
-
-
+   
+# 换手率因子
 def turnover(Turnovers, col, t, dt):
         
     tmpTurnovers = Turnovers.ewm(span=dt, axis=0).mean()
@@ -62,6 +56,7 @@ def turnover(Turnovers, col, t, dt):
     return topCol.to_list()
     
 
+# 铜金价格比因子
 def copperGold(Prices, col, t, dt):
     
     ratioCG = Prices['中信证券COMEX铜期货'] / Prices['中信证券COMEX黄金期货']
@@ -78,6 +73,7 @@ def copperGold(Prices, col, t, dt):
         return []  
 
 
+# 铜油价格比因子
 def copperGas(Prices, col, t, dt):
 
     ratioCG = Prices['中信证券COMEX铜期货'] / Prices['中信证券WTI原油期货']
@@ -94,6 +90,7 @@ def copperGas(Prices, col, t, dt):
         return []     
 
 
+# 汇率因子
 def fxRate(FXs, col, t, dt):
     
     fxs = FXs.ewm(span=dt, axis=0).mean()
